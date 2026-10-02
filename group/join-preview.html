@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<title>PawNow のグループへの招待</title>
+<!--
+  招待のページ（Sprint 71 ・ 契約 C1 ・ 家族テストの指摘4）。
+
+  元はリポジトリの site/group/join-preview.html。公開ページ（GitHub Pages の pawnow）へは
+  作業の写しに同じバイトで写してから出す（docs/runbook.md の「招待のページ」の節）。
+
+  守っていること:
+  - 通信しない。外の字の型 ・ 画像 ・ 計測 ・ 外の CSS ・ 外の JS を持たない（全部この1枚の中）
+  - 招待コードを出さない（V-21）。グループ名も出さない（ページはサーバーに問わない）
+  - トークンは「アプリで開く」と「外のブラウザで開く」の href の中にだけ置く（画面の字にしない）
+  - トークンの形はアプリとサーバーと同じ（convex/lib/config.ts の INVITE_TOKEN_ALPHABET と INVITE_TOKEN_LENGTH）。
+    形が違えば「アプリで開く」を作らない
+  - App Store の番号は eas.json の ascAppId と同じ
+-->
+<style>
+:root{
+  --bg:#010103; --bg-secondary:#16171A; --border:#2E3035;
+  --text:#F9FAFB; --text-secondary:#B0B3B8; --primary:#096DFD; --on-primary:#FFFFFF; --link:#2B81FD;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:none;text-size-adjust:none}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  font-size:15px;line-height:1.7;overflow-wrap:anywhere;word-break:normal}
+main{max-width:480px;margin:0 auto;padding:40px 16px 48px}
+.brand{margin:0 0 24px;font-size:15px;font-weight:700;color:var(--text-secondary)}
+h1{margin:0 0 12px;font-size:24px;line-height:1.35}
+p{margin:0 0 16px}
+.lead{color:var(--text-secondary)}
+.actions{display:flex;flex-direction:column;gap:12px;margin:24px 0}
+.button{display:flex;align-items:center;justify-content:center;min-height:52px;min-width:44px;
+  padding:12px 16px;border-radius:14px;font-size:17px;font-weight:700;line-height:1.35;text-align:center;
+  text-decoration:none}
+.button.primary{background:var(--primary);color:var(--on-primary)}
+.button.secondary{background:var(--bg-secondary);color:var(--text);border:1px solid var(--border)}
+.button:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.note{font-size:13px;color:var(--text-secondary)}
+.hint{margin-top:24px;padding:12px 16px;border-radius:12px;background:var(--bg-secondary);font-size:13px;color:var(--text-secondary)}
+.invalid{padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--bg-secondary)}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<main>
+  <p class="brand">PawNow</p>
+  <h1 data-testid="invite-page-title">グループに招待されています</h1>
+  <p class="lead">PawNow は、ペットの「いま」を家族や友だちと撮りあうアプリです。アプリで開くと、招待されたグループに参加できます。</p>
+
+  <p class="invalid" data-testid="invite-page-invalid" id="invalid" hidden>このリンクは形が正しくないため開けません。招待した人に、リンクをもう一度送ってもらってください。</p>
+
+  <div class="actions">
+    <a class="button primary" data-testid="invite-page-open" id="open" href="#" hidden>アプリで開く</a>
+    <a class="button secondary" data-testid="invite-page-browser" id="browser" href="#" hidden>外のブラウザで開く</a>
+    <a class="button secondary" data-testid="invite-page-store" id="store" href="https://apps.apple.com/jp/app/id6806768532">App Store で PawNow を入手</a>
+  </div>
+
+  <p class="note" id="browser-note" hidden>LINE の中で「アプリで開く」を押しても何も起きないときは、「外のブラウザで開く」から開き直してください。</p>
+  <p class="note">アプリが入っていない人は、App Store から入れたあと、このリンクをもう一度開いてください。</p>
+
+  <p class="hint" data-testid="invite-page-code-hint">招待コードを教えてもらった人は、アプリの「グループ」の「＋」から「コードで入る」を選んでも参加できます。</p>
+</main>
+<script>
+(function () {
+  "use strict";
+  /* convex/lib/config.ts の INVITE_TOKEN_ALPHABET と INVITE_TOKEN_LENGTH と同じ（片方を変えたらもう片方も） */
+  var ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+  var LENGTH = 32;
+  /* アプリの scheme（app.json の expo.scheme）と、アプリの中の参加の面の道（lib/invite-link.ts の invitePathOf） */
+  var APP_PREFIX = "pawnow://group/join-preview?t=";
+
+  function isToken(raw) {
+    if (typeof raw !== "string" || raw.length !== LENGTH) return false;
+    for (var i = 0; i < raw.length; i++) {
+      if (ALPHABET.indexOf(raw.charAt(i)) < 0) return false;
+    }
+    return true;
+  }
+
+  function remove(el) {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+
+  var token = null;
+  try {
+    token = new URLSearchParams(window.location.search).get("t");
+  } catch (e) {
+    token = null;
+  }
+
+  var open = document.getElementById("open");
+  var browser = document.getElementById("browser");
+  var browserNote = document.getElementById("browser-note");
+  var invalid = document.getElementById("invalid");
+
+  if (!isToken(token)) {
+    /* 形が違う: 押せる道を作らない（字は画面に出さない） */
+    remove(open);
+    remove(browser);
+    remove(browserNote);
+    invalid.hidden = false;
+    return;
+  }
+
+  /* 形が合う: 断りの段は DOM から外す（見えない箱も残さない） */
+  remove(invalid);
+  open.href = APP_PREFIX + token;
+  open.hidden = false;
+
+  /* LINE の中のブラウザから外のブラウザへ出る道（LINE は openExternalBrowser=1 を外で開く） */
+  try {
+    var here = new URL(window.location.href);
+    here.searchParams.set("openExternalBrowser", "1");
+    browser.href = here.toString();
+    browser.hidden = false;
+    browserNote.hidden = false;
+  } catch (e) {
+    remove(browser);
+    remove(browserNote);
+  }
+})();
+</script>
+</body>
+</html>
