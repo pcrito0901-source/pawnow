@@ -106,13 +106,15 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:8px}
 ペットと利用者のプロフィール写真は、本アプリ内のカメラで撮影するほか、<br>
 端末の写真ライブラリから選ぶこともできます。その場合も、当社が受け取るのは利用者が選んだ写真だけです。</p>
 <h3>2.3 利用状況の記録（分析）</h3>
-<p>本アプリはサービス改善のため、利用状況を記録します。記録するのは以下の17種類の操作のみです。</p>
+<p>本アプリはサービス改善のため、利用状況を記録します。記録するのは以下の21種類の操作のみです。</p>
 <p><code>app_opened</code> / <code>today_feed_viewed</code> / <code>day_choice_selected</code> / <code>post_shared</code> /<br>
 <code>album_viewed</code> / <code>reaction_added</code> / <code>now_request_sent</code> / <code>now_request_answered</code> /<br>
-<code>paywall_viewed</code> / <code>purchase_completed</code> / <code>group_created</code> / <code>invite_created</code> /<br>
-<code>invite_shared</code> / <code>invite_opened</code> / <code>group_joined</code> / <code>onboarding_completed</code> /<br>
-<code>paywall_dismissed</code></p>
+<code>paywall_viewed</code> / <code>purchase_completed</code> / <code>group_feed_viewed</code> / <code>comment_added</code> /<br>
+<code>group_created</code> / <code>invite_created</code> / <code>invite_shared</code> / <code>invite_opened</code> /<br>
+<code>group_joined</code> / <code>onboarding_completed</code> / <code>paywall_dismissed</code> / <code>health_viewed</code> /<br>
+<code>health_record_added</code></p>
 <p>各記録に添える情報は、<strong>すべて数値・真偽値・あらかじめ定めた選択肢のいずれか</strong>です。<br>
+また、どの版のアプリから送られたかを区別するため、アプリのビルド番号（数字）を添えます。<br>
 自由に入力された文字列を格納できる場所が、仕組みとして存在しません。</p>
 <p><strong>分析基盤へ送信しないもの（設計上、送信できません）</strong></p>
 <ul>
@@ -120,7 +122,7 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:8px}
 <li>一言、コメントの本文</li>
 <li>ペットの名前、利用者の表示名、メールアドレス</li>
 <li>グループの招待コード</li>
-<li>ペットの健康の記録</li>
+<li>ペットの健康の記録の内容（体重の値、お薬の名前や量、病院、症状、日付など）。健康の記録を付けたことと、その種類（体重・お薬の登録・飲ませた記録・通院・ワクチン）は送ります</li>
 </ul>
 <p>分析上の利用者識別には、<strong>メールアドレスや表示名とは無関係な不透明な識別子</strong>を用います。</p>
 <p>記録の送信先は PostHog Inc.（米国）の分析基盤です。<br>
@@ -138,7 +140,7 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:8px}
 <li value="1">本アプリの機能の提供（投稿、閲覧、アルバム、グループ、通知、健康の記録）</li>
 <li value="2">有料機能の提供可否の判定</li>
 <li value="3">不具合の調査および対応</li>
-<li value="4">サービスの改善（2.3 の範囲）</li>
+<li value="4">サービスの改善（2.3 の範囲、および個人を区別しない件数の集計）</li>
 <li value="5">重要なお知らせの連絡</li>
 </ol>
 <p><strong>当社は、取得した情報を広告の配信や、利用者の行動追跡のために利用しません。</strong><br>
@@ -163,11 +165,12 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:8px}
 <hr>
 <h2>5. 写真の保護</h2>
 <p>写真は暗号化された通信経路を通じて保管され、<strong>取得には短時間で失効する署名付きのURLが必要</strong>です。</p>
-<p>本アプリには「当日の写真は、自分もその日の写真を出した人にだけ見える」という仕組みがあります。<br>
-この判定は<strong>サーバー側で行われ、条件を満たさない利用者にはそもそも写真のURLが発行されません。</strong><br>
+<p>グループの写真は、そのグループのメンバーにだけ見えます。<br>
+この判定は<strong>サーバー側で行われ、メンバーでない利用者にはそもそも写真のURLが発行されません。</strong><br>
 画面上で隠しているのではなく、データが渡らない構造です。</p>
 <p>グループを離脱した場合、そのグループの写真は当日分・過去分ともに閲覧できなくなります。<br>
-自身が撮影した写真は、自身のペットのアルバムに残ります。</p>
+自身が撮影した写真は、自身のペットのアルバムに残ります。<br>
+グループが削除された場合も、そのグループで共有されていた写真は閲覧できなくなります。写真そのものは、撮影した利用者のペットのアルバムに残ります。</p>
 <hr>
 <h2>6. 保存期間と削除</h2>
 <ul>
@@ -180,8 +183,9 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:8px}
 <h2>7. 通知</h2>
 <p>本アプリは、1日1回グループ全員に同時に届く通知を送信します。<br>
 通知の時刻はグループごとに決まっています。<br>
-グループごとに、通知を受け取るかどうかを選べます。<br>
-このほか、「いま見たい」のお願いとその返事、および利用者が登録したお薬のリマインド（登録した本人にだけ届きます）を通知します。<br>
+グループごとに、通知を受け取るかどうかを選べます。コメントと返信、リアクション、写真を出したことの通知は、種類ごとにも選べます。<br>
+このほか、「いま見たい」のお願いとその返事、自分の写真に付いたコメントとリアクション、自分のコメントへの返信、同じグループのメンバーが写真を出したこと、および利用者が登録したお薬のリマインド（登録した本人にだけ届きます）を通知します。<br>
+通知の文面には、コメントの本文や写真そのものは含めません。<br>
 通知そのものの受信可否は、端末の設定でいつでも変更できます。</p>
 <p>通知を届けるため、端末ごとの通知用のトークンを保存し、<br>
 Expo（650 Industries, Inc.）の配信の仕組みを通じて Apple に渡します。</p>
@@ -206,7 +210,7 @@ Expo（650 Industries, Inc.）の配信の仕組みを通じて Apple に渡し�
 上記の連絡先までお申し出ください。</p>
 <hr>
 <p>制定日: 2026年8月29日<br>
-最終改定日: 2026年9月27日</p>
+最終改定日: 2026年10月10日</p>
 </article>
 </main>
 <footer class="site">
